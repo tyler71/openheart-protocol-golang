@@ -2,11 +2,15 @@ package database
 
 import (
 	"context"
+	"fmt"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/jmoiron/sqlx"
+	"log"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-
-	_ "github.com/lib/pq"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 const defaultTimeout = 3 * time.Second
@@ -19,7 +23,7 @@ func New(dsn string) (*DB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 
-	db, err := sqlx.ConnectContext(ctx, "postgres", "postgres://"+dsn)
+	db, err := sqlx.ConnectContext(ctx, "mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +32,14 @@ func New(dsn string) (*DB, error) {
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxIdleTime(5 * time.Minute)
 	db.SetConnMaxLifetime(2 * time.Hour)
+
+	m, err := migrate.New("file://internal/database/migrations", fmt.Sprintf("mysql://%s", dsn))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := m.Up(); err != nil {
+		log.Fatal(err)
+	}
 
 	return &DB{db}, nil
 }

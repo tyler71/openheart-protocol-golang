@@ -1,0 +1,2 @@
+DROP TABLE emoji;
+DROP TABLE site;

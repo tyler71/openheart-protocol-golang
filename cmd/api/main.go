@@ -42,9 +42,9 @@ type application struct {
 func run(logger *slog.Logger) error {
 	var cfg config
 
-	cfg.baseURL = env.GetString("BASE_URL", "http://localhost:4444")
 	cfg.httpPort = env.GetInt("HTTP_PORT", 4444)
-	cfg.db.dsn = env.GetString("DB_DSN", "user:pass@localhost:5432/db")
+	cfg.baseURL = env.GetString("BASE_URL", fmt.Sprintf("http://localhost:%d", cfg.httpPort))
+	cfg.db.dsn = env.GetString("DB_DSN", "user:pass@localhost:3306/db")
 
 	showVersion := flag.Bool("version", false, "display version and exit")
 
@@ -61,7 +61,7 @@ func run(logger *slog.Logger) error {
 	}
 	defer db.Close()
 
-	app := &application{
+	app := application{
 		config: cfg,
 		db:     db,
 		logger: logger,
