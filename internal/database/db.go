@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jmoiron/sqlx"
@@ -38,7 +39,9 @@ func New(dsn string) (*DB, error) {
 		log.Fatal(err)
 	}
 	if err := m.Up(); err != nil {
-		log.Fatal(err)
+		if !errors.Is(err, migrate.ErrNoChange) {
+			log.Fatal(err)
+		}
 	}
 
 	return &DB{db}, nil
