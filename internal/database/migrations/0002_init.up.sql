@@ -1,9 +1,10 @@
 START TRANSACTION;
 CREATE TABLE site (
-                       id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-                       url VARCHAR(255) UNIQUE NOT NULL,
-                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                        id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+                        url VARCHAR(255) UNIQUE NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX url_idx (url)
 );
 CREATE TABLE emoji (
                         id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
