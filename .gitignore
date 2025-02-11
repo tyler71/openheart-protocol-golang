@@ -2,6 +2,7 @@ _data/
 .envrc
 .env
 
+build/
 .idea/
 *.gz
 
