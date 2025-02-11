@@ -8,9 +8,16 @@ import (
 	"github.com/dmolesUC/emoji"
 	"io"
 	"net/http"
-
 	"openheart.tylery.com/internal/response"
 )
+
+type urlIdColumn int
+type emojiTable struct {
+	Id     int  `db:"id"`
+	SiteId int  `db:"site_id"`
+	Emoji  rune `db:"emoji"`
+	Count  int  `db:"count"`
+}
 
 func (app *application) status(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{
@@ -23,17 +30,41 @@ func (app *application) status(w http.ResponseWriter, r *http.Request) {
 }
 
 // Returns all emoji's for a given url
-func (app *application) get(w http.ResponseWriter, r *http.Request) {
-	mockEmoji := map[string]int{
-		"😀": 2,
-		"🥰": 1,
+func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
+	url := r.PathValue("url")
+
+	var urlId urlIdColumn
+	var emojiRecords []emojiTable
+
+	// We look for the site id record. If none exists, we return 404
+	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", url)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		app.serverError(w, r, err)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		w.WriteHeader(http.StatusNotFound)
+		_, err = w.Write([]byte("NOT FOUND"))
+		return
 	}
 
-	url := r.PathValue("url")
-	fmt.Println(url)
-	var data map[string]int = mockEmoji
+	// We look for the all emoji's with this site url. If none exists, we return 404
+	err = app.db.Select(&emojiRecords, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? ORDER BY count DESC", urlId)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		app.serverError(w, r, err)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		w.WriteHeader(http.StatusNotFound)
+		_, err = w.Write([]byte("NOT FOUND"))
+		return
+	}
 
-	err := response.JSON(w, http.StatusOK, data)
+	// We're not interested in revealing all information. We only return the emoji and the count for it
+	data := make(map[string]int, len(emojiRecords))
+	for i := range emojiRecords {
+		data[string(emojiRecords[i].Emoji)] = emojiRecords[i].Count
+	}
+
+	err = response.JSON(w, http.StatusOK, data)
 	if err != nil {
 		app.serverError(w, r, err)
 	}
@@ -41,40 +72,66 @@ func (app *application) get(w http.ResponseWriter, r *http.Request) {
 
 // Returns emoji count for a specific url and emoji
 func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
-	mockEmoji := map[string]int{
-		"😀": 2,
-		"🥰": 1,
+	url, emojiPathValue := r.PathValue("url"), r.PathValue("emoji")
+	var emojiRune rune
+	var urlId urlIdColumn
+	var emojiRecord emojiTable
+
+	for _, r := range emojiPathValue {
+		emojiRune = r
+		break
 	}
-	url, emoji := r.PathValue("url"), r.PathValue("emoji")
-	fmt.Println(url, emoji)
+	fmt.Println(url, emojiPathValue)
 
-	data := mockEmoji[emoji]
+	// We look for the site id record. If none exists, we return 404
+	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", url)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		app.serverError(w, r, err)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		w.WriteHeader(http.StatusNotFound)
+		_, err = w.Write([]byte("NOT FOUND"))
+		return
+	}
 
-	err := response.JSON(w, http.StatusOK, data)
+	err = app.db.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emojiRune)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		app.serverError(w, r, err)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		w.WriteHeader(http.StatusNotFound)
+		_, err = w.Write([]byte("NOT FOUND"))
+		return
+	}
+
+	// On the happy path here, we have the record and return the count to the user
+	data := map[string]int{
+		string(emojiRecord.Emoji): emojiRecord.Count,
+	}
+	w.Header().Add("Content-Type", "application/json")
+	err = response.JSON(w, http.StatusOK, data)
 	if err != nil {
 		app.serverError(w, r, err)
 	}
 }
 
-var Url int
-
 // Increment the count for a specific emoji by 1
-func (app *application) create(w http.ResponseWriter, r *http.Request) {
+func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	reader := bufio.NewReader(io.LimitReader(r.Body, 64))
-	emojiRune, emojiRuneSize, err := reader.ReadRune()
-	if err != nil || emojiRuneSize == 0 {
+	emojiRune, emojiRuneByteSize, err := reader.ReadRune()
+	if err != nil || emojiRuneByteSize == 0 {
 		app.serverError(w, r, err)
 	}
-	url := r.PathValue("url")
-	fmt.Println(emojiRune, url, string(emojiRune))
-	fmt.Println(emoji.IsEmoji(emojiRune))
-	var urlId int
-	var emojiRecord struct {
-		Id     int    `db:"id"`
-		SiteId int    `db:"site_id"`
-		Emoji  string `db:"emoji"`
-		Count  int    `db:"count"`
+	if !emoji.IsEmoji(emojiRune) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err = w.Write([]byte("BAD REQUEST"))
+		return
 	}
+
+	url := r.PathValue("url")
+	var urlId urlIdColumn
+
+	var emojiRecord emojiTable
 
 	// First, we get the site id based on the url. We should probably try to parse the url to try and only get
 	// relevant data.
@@ -119,7 +176,7 @@ func (app *application) create(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 	fmt.Println(url, emojiRecord.Emoji)
 
-	if noEmojiRecord == true || noSiteRecord == true {
+	if noEmojiRecord == true {
 		w.WriteHeader(201)
 	} else {
 		w.WriteHeader(200)
