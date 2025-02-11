@@ -4,12 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"openheart.tylery.com/internal/env"
 	"os"
 	"runtime/debug"
 	"sync"
 
 	"openheart.tylery.com/internal/database"
-	"openheart.tylery.com/internal/env"
 	"openheart.tylery.com/internal/version"
 )
 
@@ -42,9 +42,33 @@ type application struct {
 func run(logger *slog.Logger) error {
 	var cfg config
 
-	cfg.httpPort = env.GetInt("HTTP_PORT", 4444)
-	cfg.baseURL = env.GetString("BASE_URL", fmt.Sprintf("http://localhost:%d", cfg.httpPort))
-	cfg.db.dsn = env.GetString("DB_DSN", "user:pass@localhost:3306/db")
+	// The intent for config here is to allow environment variables, however if they do it inline it is overridden
+	// by inline flags
+	var baseUrl string
+	var httpPort int
+	var dsn string
+
+	flag.IntVar(&httpPort, "http-port", 0, "Default 4444")
+	flag.StringVar(&baseUrl, "base-url", "", "Base URL (default http://localhost:4444)")
+	flag.StringVar(&dsn, "dsn", "", "Database DSN (default user:password@tcp(host:port)/database)")
+
+	if httpPort != 0 {
+		cfg.httpPort = httpPort
+	} else {
+		cfg.httpPort = env.GetInt("HTTP_PORT", 4444)
+	}
+
+	if baseUrl != "" {
+		cfg.baseURL = baseUrl
+	} else {
+		cfg.baseURL = env.GetString("BASE_URL", fmt.Sprintf("http://localhost:%d", cfg.httpPort))
+	}
+
+	if dsn != "" {
+		cfg.db.dsn = dsn
+	} else {
+		cfg.db.dsn = env.GetString("DB_DSN", "user:pass@localhost:3306/db")
+	}
 
 	showVersion := flag.Bool("version", false, "display version and exit")
 
