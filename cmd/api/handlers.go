@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/dmolesUC/emoji"
 	"io"
 	"net/http"
@@ -36,13 +35,13 @@ func (app *application) status(w http.ResponseWriter, r *http.Request) {
 
 // Returns all emoji's for a given url
 func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
-	url := r.PathValue("url")
+	urlPathValue := r.PathValue("url")
 
 	var urlId urlIdColumn
 	var emojiRecords []emojiTable
 
 	// We look for the site id record. If none exists, we return 404
-	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", url)
+	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
 	}
@@ -52,7 +51,7 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We look for the all emoji's with this site url. If none exists, we return 404
+	// We look for the all emoji's with this site urlPathValue. If none exists, we return 404
 	err = app.db.Select(&emojiRecords, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? ORDER BY count DESC", urlId)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
@@ -77,7 +76,7 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 
 // Returns emoji count for a specific url and emoji
 func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
-	url, emojiPathValue := r.PathValue("url"), r.PathValue("emoji")
+	urlPathValue, emojiPathValue := r.PathValue("url"), r.PathValue("emoji")
 	var emojiRune rune
 	var urlId urlIdColumn
 	var emojiRecord emojiTable
@@ -86,10 +85,9 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 		emojiRune = r
 		break
 	}
-	fmt.Println(url, emojiPathValue)
 
 	// We look for the site id record. If none exists, we return 404
-	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", url)
+	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
 	}
@@ -159,14 +157,14 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := r.PathValue("url")
+	urlPathValue := r.PathValue("url")
 	var urlId urlIdColumn
 
 	var emojiRecord emojiTable
 
 	// First, we get the site id based on the url. We should probably try to parse the url to try and only get
 	// relevant data.
-	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", url)
+	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
 	}
@@ -192,8 +190,8 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	tx := app.db.MustBegin()
 	defer tx.Rollback()
 	if noSiteRecord {
-		tx.MustExec("INSERT INTO site (url) VALUES (?)", url)
-		err := tx.Get(&urlId, "SELECT id FROM site WHERE url=?", url)
+		tx.MustExec("INSERT INTO site (url) VALUES (?)", urlPathValue)
+		err := tx.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			app.serverError(w, r, err)
 		}
@@ -205,7 +203,6 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tx.Commit()
-	fmt.Println(url, emojiRecord.Emoji)
 
 	if noEmojiRecord == true {
 		w.WriteHeader(201)
