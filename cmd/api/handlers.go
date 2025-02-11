@@ -11,7 +11,10 @@ import (
 	"net/http"
 	"net/url"
 	"openheart.tylery.com/internal/response"
+	"unicode/utf8"
 )
+
+const maxPayloadByteSize = 32
 
 type urlIdColumn int
 type emojiTable struct {
@@ -110,7 +113,6 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 	data := map[string]int{
 		string(emojiRecord.Emoji): emojiRecord.Count,
 	}
-	w.Header().Add("Content-Type", "application/json")
 	err = response.JSON(w, http.StatusOK, data)
 	if err != nil {
 		app.serverError(w, r, err)
@@ -121,23 +123,28 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	var emojiRune rune
 	if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-		reader := bufio.NewReader(io.LimitReader(r.Body, 64))
-		encodedValue, _ := reader.ReadString('=')
-		escapedValue, _ := url.QueryUnescape(encodedValue)
-		emojiRune = []rune(escapedValue)[0]
-	} else if r.Header.Get("Content-Type") == "application/json" {
-		reader := bufio.NewReader(io.LimitReader(r.Body, 64))
-		encodedValue, _ := reader.ReadBytes('=')
-		var request = struct {
-			Emoji string `json:"emoji"`
-		}{}
-		err := json.Unmarshal(encodedValue, &request)
+		reader := io.LimitReader(r.Body, maxPayloadByteSize)
+		encodedValue := make([]byte, maxPayloadByteSize)
+		reader.Read(encodedValue)
+		escapedValue, err := url.QueryUnescape(string(encodedValue))
 		if err != nil {
 			app.serverError(w, r, err)
 		}
-		emojiRune = []rune(request.Emoji)[0]
+		emojiRune, _ = utf8.DecodeRuneInString(escapedValue)
+	} else if r.Header.Get("Content-Type") == "application/json" {
+		reader := io.LimitReader(r.Body, maxPayloadByteSize)
+		encodedValue := make([]byte, maxPayloadByteSize)
+		byteLength, err := reader.Read(encodedValue)
+		var request = struct {
+			Emoji string `json:"emoji"`
+		}{}
+		err = json.Unmarshal(encodedValue[:byteLength], &request)
+		if err != nil {
+			app.serverError(w, r, err)
+		}
+		emojiRune, _ = utf8.DecodeRuneInString(request.Emoji)
 	} else {
-		reader := bufio.NewReader(io.LimitReader(r.Body, 64))
+		reader := bufio.NewReader(io.LimitReader(r.Body, maxPayloadByteSize))
 		e, emojiRuneByteSize, err := reader.ReadRune()
 		emojiRune = e
 		if err != nil || emojiRuneByteSize == 0 {
