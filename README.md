@@ -1,6 +1,6 @@
 # OpenHeart Server
 
-A Go server for tracking emoji reactions on websites.
+A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
 
 ## Configuration
 

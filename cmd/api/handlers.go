@@ -3,11 +3,13 @@ package main
 import (
 	"bufio"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dmolesUC/emoji"
 	"io"
 	"net/http"
+	"net/url"
 	"openheart.tylery.com/internal/response"
 )
 
@@ -117,11 +119,33 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 
 // Increment the count for a specific emoji by 1
 func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
-	reader := bufio.NewReader(io.LimitReader(r.Body, 64))
-	emojiRune, emojiRuneByteSize, err := reader.ReadRune()
-	if err != nil || emojiRuneByteSize == 0 {
-		app.serverError(w, r, err)
+	var emojiRune rune
+	if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+		reader := bufio.NewReader(io.LimitReader(r.Body, 64))
+		encodedValue, _ := reader.ReadString('=')
+		escapedValue, _ := url.QueryUnescape(encodedValue)
+		emojiRune = []rune(escapedValue)[0]
+	} else if r.Header.Get("Content-Type") == "application/json" {
+		reader := bufio.NewReader(io.LimitReader(r.Body, 64))
+		encodedValue, _ := reader.ReadBytes('=')
+		var request = struct {
+			Emoji string `json:"emoji"`
+		}{}
+		err := json.Unmarshal(encodedValue, &request)
+		if err != nil {
+			app.serverError(w, r, err)
+		}
+		emojiRune = []rune(request.Emoji)[0]
+	} else {
+		reader := bufio.NewReader(io.LimitReader(r.Body, 64))
+		e, emojiRuneByteSize, err := reader.ReadRune()
+		emojiRune = e
+		if err != nil || emojiRuneByteSize == 0 {
+			app.serverError(w, r, err)
+		}
 	}
+
+	var err error
 	if !emoji.IsEmoji(emojiRune) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err = w.Write([]byte("BAD REQUEST"))

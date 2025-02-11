@@ -49,7 +49,7 @@ func run(logger *slog.Logger) error {
 	var dsn string
 
 	flag.IntVar(&httpPort, "http-port", 0, "Default 4444")
-	flag.StringVar(&baseUrl, "base-url", "", "Base URL (default http://localhost:4444)")
+	flag.StringVar(&baseUrl, "base-url", "", "Base URL (default http://localhost)")
 	flag.StringVar(&dsn, "dsn", "", "Database DSN (default user:password@tcp(host:port)/database)")
 
 	if httpPort != 0 {
