@@ -2,18 +2,107 @@
 
 A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
 
+### Differences
+- Only allows a single reaction per POST request
+- JSON is permitted `POST localhost:4444/example.com { "emoji": "🌾"}`
+- You may look up a specific emoji count: `GET https://localhost:4444/example.com/🌾`
+
+### Examples
+
+#### Creating a Reaction
+
+Using plain text:
+```bash
+# Using curl
+curl -X POST -d "❤️" http://localhost:4444/example.com
+
+# Using fetch
+fetch('http://localhost:4444/example.com', {
+  method: 'POST',
+  body: '❤️'
+})
+```
+
+Using form data:
+```bash
+# Using curl
+curl -X POST \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "emoji=❤️" \
+  http://localhost:4444/example.com
+
+# Using fetch
+fetch('http://localhost:4444/example.com', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  },
+  body: '❤️='
+})
+```
+
+Using JSON:
+```bash
+# Using curl
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"emoji": "❤️"}' \
+  http://localhost:4444/example.com
+
+# Using fetch
+fetch('http://localhost:4444/example.com', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ emoji: '❤️' })
+})
+```
+
+#### Getting All Reactions
+
+```bash
+# Using curl
+curl http://localhost:4444/example.com
+
+# Using fetch
+fetch('http://localhost:4444/example.com')
+
+# Response
+{
+  "❤️": 5,
+  "👍": 3,
+  "🌟": 1
+}
+```
+
+#### Getting Count for Specific Emoji
+
+```bash
+# Using curl
+curl http://localhost:4444/example.com/❤️
+
+# Using fetch
+fetch('http://localhost:4444/example.com/❤️')
+
+# Response
+{
+  "count": 5
+}
+```
+
 ## Configuration
 
 The server can be configured through command line flags or environment variables. Command line flags take precedence over environment variables.
 
 ### Available Configuration Options
 
-| Flag | Environment Variable | Default | Description |
-|------|---------------------|---------|-------------|
-| `-http-port` | `HTTP_PORT` | 4444 | Port number for the HTTP server |
-| `-base-url` | `BASE_URL` | `http://localhost` | Base URL for the server |
-| `-dsn` | `DB_DSN` | `user:password@tcp(host:port)/database` | Database connection string |
-| `-version` | - | - | Display version and exit |
+| Flag         | Environment Variable | Default                                 | Description                     |
+|--------------|----------------------|-----------------------------------------|---------------------------------|
+| `-http-port` | `HTTP_PORT`          | 4444                                    | Port number for the HTTP server |
+| `-base-url`  | `BASE_URL`           | `http://localhost`                      | Base URL for the server         |
+| `-dsn`       | `DB_DSN`             | `user:password@tcp(host:port)/database` | Database connection string      |
+| `-version`   | -                    | -                                       | Display version and exit        |
 
 ### Database Configuration
 
