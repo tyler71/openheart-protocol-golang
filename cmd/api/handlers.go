@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/dmolesUC/emoji"
 	"io"
 	"net/http"
@@ -209,6 +210,8 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(200)
 	}
+
+	app.logger.Info(fmt.Sprintf("%s just got a %s reaction!", urlPathValue, string(emojiRune)))
 	_, err = w.Write([]byte("OK"))
 	if err != nil {
 		app.serverError(w, r, err)
