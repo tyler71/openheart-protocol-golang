@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -121,19 +120,21 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 // Increment the count for a specific emoji by 1
 func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	var emojiRune rune
+	reader := io.LimitReader(r.Body, maxPayloadByteSize)
+	encodedValue := make([]byte, maxPayloadByteSize)
+	byteLength, err := reader.Read(encodedValue)
+
+	// Form submissions are url encoded, so we need to decode them before getting the
+	// key rune
 	if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-		reader := io.LimitReader(r.Body, maxPayloadByteSize)
-		encodedValue := make([]byte, maxPayloadByteSize)
-		reader.Read(encodedValue)
 		escapedValue, err := url.QueryUnescape(string(encodedValue))
 		if err != nil {
 			app.serverError(w, r, err)
 		}
 		emojiRune, _ = utf8.DecodeRuneInString(escapedValue)
+		// JSON has a specific structure {"emoji": "🌾"}
+		// So, we need to convert it to this structure first. Then we parse it
 	} else if r.Header.Get("Content-Type") == "application/json" {
-		reader := io.LimitReader(r.Body, maxPayloadByteSize)
-		encodedValue := make([]byte, maxPayloadByteSize)
-		byteLength, err := reader.Read(encodedValue)
 		var request = struct {
 			Emoji string `json:"emoji"`
 		}{}
@@ -142,16 +143,14 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 			app.serverError(w, r, err)
 		}
 		emojiRune, _ = utf8.DecodeRuneInString(request.Emoji)
+		//	For all other requests, we try to decode the string and get the first rune.
 	} else {
-		reader := bufio.NewReader(io.LimitReader(r.Body, maxPayloadByteSize))
-		e, emojiRuneByteSize, err := reader.ReadRune()
-		emojiRune = e
-		if err != nil || emojiRuneByteSize == 0 {
-			app.serverError(w, r, err)
-		}
+		emojiRune, _ = utf8.DecodeRuneInString(string(encodedValue))
+	}
+	if err != nil && err.Error() != "EOF" {
+		app.serverError(w, r, err)
 	}
 
-	var err error
 	if !emoji.IsEmoji(emojiRune) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err = w.Write([]byte("BAD REQUEST"))

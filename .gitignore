@@ -3,3 +3,6 @@ _data/
 .env
 
 .idea/
+*.gz
+
+openheart-protocol
