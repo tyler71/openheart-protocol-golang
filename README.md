@@ -3,10 +3,12 @@
 A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
 
 ### Differences
-- Only allows a single reaction per POST request
 - JSON is permitted `POST localhost:4444/example.com { "emoji": "🌾"}`
 - You may look up a specific emoji count: `GET https://localhost:4444/example.com/🌾`
 
+Limitation: Currently this server will only handle a single Unicode code point.
+- This works: 🎃
+- This does _not_ work: 👩🏾‍❤️‍💋‍👩🏻 
 ### Examples
 
 #### Creating a Reaction
@@ -14,12 +16,12 @@ A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
 Using plain text:
 ```bash
 # Using curl
-curl -X POST -d "❤️" http://localhost:4444/example.com
+curl -X POST -d "❤" http://localhost:4444/example.com
 
 # Using fetch
 fetch('http://localhost:4444/example.com', {
   method: 'POST',
-  body: '❤️'
+  body: '❤'
 })
 ```
 
@@ -28,7 +30,7 @@ Using form data:
 # Using curl
 curl -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "emoji=❤️" \
+  -d "emoji=️❤" \
   http://localhost:4444/example.com
 
 # Using fetch
@@ -37,7 +39,7 @@ fetch('http://localhost:4444/example.com', {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
   },
-  body: '❤️='
+  body: '❤='
 })
 ```
 
@@ -46,7 +48,7 @@ Using JSON:
 # Using curl
 curl -X POST \
   -H "Content-Type: application/json" \
-  -d '{"emoji": "❤️"}' \
+  -d '{"emoji": "❤"}' \
   http://localhost:4444/example.com
 
 # Using fetch
@@ -55,7 +57,7 @@ fetch('http://localhost:4444/example.com', {
   headers: {
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify({ emoji: '❤️' })
+  body: JSON.stringify({ emoji: '❤' })
 })
 ```
 
@@ -70,7 +72,7 @@ fetch('http://localhost:4444/example.com')
 
 # Response
 {
-  "❤️": 5,
+  "❤": 5,
   "👍": 3,
   "🌟": 1
 }
@@ -80,14 +82,14 @@ fetch('http://localhost:4444/example.com')
 
 ```bash
 # Using curl
-curl http://localhost:4444/example.com/❤️
+curl http://localhost:4444/example.com/❤
 
 # Using fetch
-fetch('http://localhost:4444/example.com/❤️')
+fetch('http://localhost:4444/example.com/❤')
 
 # Response
 {
-  "count": 5
+  "❤": 5
 }
 ```
 

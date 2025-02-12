@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 )
 
-const maxPayloadByteSize = 32
+const maxPayloadByteSize = 4
 
 type urlIdColumn int
 type emojiTable struct {
@@ -199,7 +199,11 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	if noEmojiRecord {
 		tx.MustExec("INSERT INTO emoji (site_id, emoji) VALUES (?, ?)", urlId, emojiRune)
 	} else {
-		tx.MustExec("UPDATE emoji SET count=? WHERE id=?", emojiRecord.Count+1, emojiRecord.Id)
+		updateStmt, _ := tx.Prepare("UPDATE emoji SET count=? WHERE id=?")
+		_, err = updateStmt.Exec(emojiRecord.Count+1, emojiRecord.Id)
+		if err != nil {
+			tx.Rollback()
+		}
 	}
 
 	tx.Commit()
@@ -210,7 +214,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}
 
-	app.logger.Info(fmt.Sprintf("%s just got a %s reaction!", urlPathValue, string(emojiRune)))
+	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, string(emojiRune)))
 	_, err = w.Write([]byte("OK"))
 	if err != nil {
 		app.serverError(w, r, err)
