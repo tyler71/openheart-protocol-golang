@@ -6,7 +6,8 @@ A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
 - JSON is permitted `POST localhost:4444/example.com { "emoji": "🌾"}`
 - You may look up a specific emoji count: `GET https://localhost:4444/example.com/🌾`
 
-Limitation: Currently this server will only handle a single Unicode code point.
+Limitation: Currently this server will only handle a single Unicode code point.  
+Todo: Implement getting first [Grapheme cluster](https://github.com/rivo/uniseg).
 - This works: 🎃
 - This does _not_ work: 👩🏾‍❤️‍💋‍👩🏻 
 ### Examples
