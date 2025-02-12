@@ -102,7 +102,6 @@ The server can be configured through command line flags or environment variables
 | Flag         | Environment Variable | Default                                 | Description                     |
 |--------------|----------------------|-----------------------------------------|---------------------------------|
 | `-http-port` | `HTTP_PORT`          | 4444                                    | Port number for the HTTP server |
-| `-base-url`  | `BASE_URL`           | `http://localhost`                      | Base URL for the server         |
 | `-dsn`       | `DB_DSN`             | `user:password@tcp(host:port)/database` | Database connection string      |
 | `-version`   | -                    | -                                       | Display version and exit        |
 
