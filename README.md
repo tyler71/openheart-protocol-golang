@@ -6,10 +6,13 @@ A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
 - JSON is permitted `POST localhost:4444/example.com { "emoji": "🌾"}`
 - You may look up a specific emoji count: `GET https://localhost:4444/example.com/🌾`
 
-Limitation: Currently this server will only handle a single Unicode code point.  
-Todo: Implement getting first [Grapheme cluster](https://github.com/rivo/uniseg).
-- This works: 🎃
-- This does _not_ work: 👩🏾‍❤️‍💋‍👩🏻 
+### Endpoints
+```
+GET localhost:4444/example.com (200)
+GET localhost:4444/example.com/👩🏾‍❤️‍💋‍👩🏻 (200 | 404)
+POST localhost:4444/example.com (201 | 200)
+```
+
 ### Examples
 
 #### Creating a Reaction
@@ -17,12 +20,12 @@ Todo: Implement getting first [Grapheme cluster](https://github.com/rivo/uniseg)
 Using plain text:
 ```bash
 # Using curl
-curl -X POST -d "❤" http://localhost:4444/example.com
+curl -X POST -d "💖" http://localhost:4444/example.com
 
 # Using fetch
 fetch('http://localhost:4444/example.com', {
   method: 'POST',
-  body: '❤'
+  body: '💖'
 })
 ```
 
@@ -31,7 +34,7 @@ Using form data:
 # Using curl
 curl -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "emoji=️❤" \
+  -d "💖=" \
   http://localhost:4444/example.com
 
 # Using fetch
@@ -40,7 +43,7 @@ fetch('http://localhost:4444/example.com', {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
   },
-  body: '❤='
+  body: '💖='
 })
 ```
 
@@ -49,7 +52,7 @@ Using JSON:
 # Using curl
 curl -X POST \
   -H "Content-Type: application/json" \
-  -d '{"emoji": "❤"}' \
+  -d '{"emoji": "💖"}' \
   http://localhost:4444/example.com
 
 # Using fetch
@@ -58,7 +61,7 @@ fetch('http://localhost:4444/example.com', {
   headers: {
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify({ emoji: '❤' })
+  body: JSON.stringify({ emoji: '💖' })
 })
 ```
 
@@ -83,14 +86,14 @@ fetch('http://localhost:4444/example.com')
 
 ```bash
 # Using curl
-curl http://localhost:4444/example.com/❤
+curl http://localhost:4444/example.com/💖
 
 # Using fetch
 fetch('http://localhost:4444/example.com/❤')
 
 # Response
 {
-  "❤": 5
+  "💖": 5
 }
 ```
 

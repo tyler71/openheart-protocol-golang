@@ -13,9 +13,10 @@ import (
 	"openheart.tylery.com/internal/response"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
-const maxPayloadByteSize = 32
+const maxPayloadByteSize = 64
 
 type urlIdColumn int
 type emojiTable struct {
@@ -54,17 +55,13 @@ func (e emojiRunesT) dbDecode() string {
 }
 
 func (es emojiStringT) parseRunes() (emojiRunesT, error) {
-	emojiRunes := make(emojiRunesT, maxPayloadByteSize/4)
+	emojiRunes := make(emojiRunesT, utf8.RuneCountInString(string(es)))
 	var count int
 	for _, r := range es {
-		if emoji.IsEmoji(r) {
-			emojiRunes[count] = r
-			count++
-		} else {
-			break
-		}
+		emojiRunes[count] = r
+		count++
 	}
-	if emojiRunes[0] == 0 {
+	if !emoji.IsEmoji(emojiRunes[0]) {
 		return emojiRunes, errors.New("no emoji found")
 	}
 	return emojiRunes[:count], nil
@@ -177,24 +174,23 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	emojiRunes := make(emojiRunesT, 4)
 	reader := io.LimitReader(r.Body, maxPayloadByteSize)
 	encodedValue := make([]byte, maxPayloadByteSize)
-	fmt.Println(encodedValue)
 	byteLength, err := reader.Read(encodedValue)
-
-	state := -1
-	encodedValue, _, _, _ = uniseg.Step(encodedValue, state)
 
 	// Form submissions are url encoded, so we need to decode them before getting the
 	// key rune
 	if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
 		escapedValue, err := url.QueryUnescape(string(encodedValue))
+		encodedValue, _, _, _ = uniseg.Step([]byte(escapedValue), -1)
 		if err != nil {
 			app.serverError(w, r, err)
 		}
 
-		es := emojiStringT(escapedValue)
+		es := emojiStringT(encodedValue)
 		emojiRunes, err = es.parseRunes()
 		if err != nil {
-			app.serverError(w, r, err)
+			w.WriteHeader(http.StatusBadRequest)
+			_, err = w.Write([]byte("BAD REQUEST"))
+			return
 		}
 
 		// JSON has a specific structure {"emoji": "🌾"}
@@ -208,7 +204,8 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 			app.serverError(w, r, err)
 		}
 
-		es := emojiStringT(request.Emoji)
+		encodedValue, _, _, _ = uniseg.Step([]byte(request.Emoji), -1)
+		es := emojiStringT(encodedValue)
 		emojiRunes, err = es.parseRunes()
 		if err != nil {
 			app.serverError(w, r, err)
@@ -216,10 +213,13 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 
 		//	For all other requests, we try to decode the string and get the first rune.
 	} else {
+		encodedValue, _, _, _ = uniseg.Step(encodedValue, -1)
 		es := emojiStringT(encodedValue)
 		emojiRunes, err = es.parseRunes()
 		if err != nil {
-			app.serverError(w, r, err)
+			w.WriteHeader(http.StatusBadRequest)
+			_, err = w.Write([]byte("BAD REQUEST"))
+			return
 		}
 	}
 	if err != nil && err.Error() != "EOF" {
@@ -288,7 +288,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}
 
-	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, string(emojiRune)))
+	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, emojiRunes.dbDecode()))
 	_, err = w.Write([]byte("OK"))
 	if err != nil {
 		app.serverError(w, r, err)
