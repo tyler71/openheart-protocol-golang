@@ -1,0 +1,9 @@
+_data/
+.envrc
+.env
+
+build/
+.idea/
+*.gz
+
+openheart-protocol

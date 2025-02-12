@@ -1,4 +1,15 @@
 services:
+  openheart-protocol:
+    restart: always
+    build:
+      context: .
+    environment:
+      DB_DSN: "${DB_DSN}"
+#    network_mode: host
+    networks:
+      - internal
+    ports:
+      - "4444:4444"
   db:
     image: mariadb
     restart: always
@@ -11,3 +22,10 @@ services:
       - ./_data/db:/var/lib/mysql
     ports:
       - "3306:3306"
+    networks:
+      - internal
+
+networks:
+  internal:
+    name: internal
+    external: false
