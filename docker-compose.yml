@@ -4,7 +4,7 @@ services:
     build:
       context: .
     environment:
-      DB_DSN: "${DB_DSN}"
+      DB_DSN: "changeUserName:changeMePassword!@tcp(db:3306)/changeDbName"
 #    network_mode: host
     networks:
       - internal
@@ -14,10 +14,10 @@ services:
     image: mariadb
     restart: always
     environment:
-      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
-      MARIADB_DATABASE: "${DB_NAME}"
-      MARIADB_USER: "${DB_USER}"
-      MARIADB_PASSWORD: "${DB_PASSWORD}"
+      MARIADB_ROOT_PASSWORD: "changeMeRoot!"
+      MARIADB_DATABASE: "changeDbName"
+      MARIADB_USER: "changeUserName"
+      MARIADB_PASSWORD: "changeMePassword!"
     volumes:
       - ./_data/db:/var/lib/mysql
     ports:
