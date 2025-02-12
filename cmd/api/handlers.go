@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dmolesUC/emoji"
+	"github.com/rivo/uniseg"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-const maxPayloadByteSize = 4
+const maxPayloadByteSize = 32
 
 type urlIdColumn int
 type emojiTable struct {
@@ -176,7 +177,11 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	emojiRunes := make(emojiRunesT, 4)
 	reader := io.LimitReader(r.Body, maxPayloadByteSize)
 	encodedValue := make([]byte, maxPayloadByteSize)
+	fmt.Println(encodedValue)
 	byteLength, err := reader.Read(encodedValue)
+
+	state := -1
+	encodedValue, _, _, _ = uniseg.Step(encodedValue, state)
 
 	// Form submissions are url encoded, so we need to decode them before getting the
 	// key rune
