@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const maxPayloadByteSize = 32
+const maxPayloadByteSize = 4
 
 type urlIdColumn int
 type emojiTable struct {
@@ -283,7 +283,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}
 
-	app.logger.Info(fmt.Sprintf("%s just got a %s reaction!", urlPathValue, emojiRunes.dbDecode()))
+	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, string(emojiRune)))
 	_, err = w.Write([]byte("OK"))
 	if err != nil {
 		app.serverError(w, r, err)
