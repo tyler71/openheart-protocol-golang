@@ -61,7 +61,13 @@ for os_arch in "${os_archs[@]}"; do
   # Build!
   echo -en "\t$os/$arch: $output_file"
   go build -ldflags "-s -w" -o build/"$output_file" "$module_name"
-  gzip -f build/"$output_file"
+  if [[ "${output_file##*.}" == "exe" ]]
+  then
+    zip --quiet build/"$app_name-$os-$arch".zip build/"$output_file"
+    rm build/"$output_file"
+  else
+    gzip -f build/"$output_file"
+  fi
 
   echo " - Complete!"
 done
