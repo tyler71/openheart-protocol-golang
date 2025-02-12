@@ -25,7 +25,6 @@ func main() {
 }
 
 type config struct {
-	baseURL  string
 	httpPort int
 	db       struct {
 		dsn string
@@ -44,24 +43,16 @@ func run(logger *slog.Logger) error {
 
 	// The intent for config here is to allow environment variables, however if they do it inline it is overridden
 	// by inline flags
-	var baseUrl string
 	var httpPort int
 	var dsn string
 
 	flag.IntVar(&httpPort, "http-port", 0, "Default 4444")
-	flag.StringVar(&baseUrl, "base-url", "", "Base URL (default http://localhost)")
 	flag.StringVar(&dsn, "dsn", "", "Database DSN (default user:password@tcp(host:port)/database)")
 
 	if httpPort != 0 {
 		cfg.httpPort = httpPort
 	} else {
 		cfg.httpPort = env.GetInt("HTTP_PORT", 4444)
-	}
-
-	if baseUrl != "" {
-		cfg.baseURL = baseUrl
-	} else {
-		cfg.baseURL = env.GetString("BASE_URL", fmt.Sprintf("http://localhost:%d", cfg.httpPort))
 	}
 
 	if dsn != "" {
