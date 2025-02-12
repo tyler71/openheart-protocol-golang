@@ -2,16 +2,18 @@ package database
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/source/httpfs"
 	"github.com/jmoiron/sqlx"
 	"log"
+	"net/http"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 const defaultTimeout = 3 * time.Second
@@ -19,6 +21,9 @@ const defaultTimeout = 3 * time.Second
 type DB struct {
 	*sqlx.DB
 }
+
+//go:embed migrations
+var migrations embed.FS
 
 func New(dsn string) (*DB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
@@ -34,7 +39,11 @@ func New(dsn string) (*DB, error) {
 	db.SetConnMaxIdleTime(5 * time.Minute)
 	db.SetConnMaxLifetime(2 * time.Hour)
 
-	m, err := migrate.New("file://internal/database/migrations", fmt.Sprintf("mysql://%s", dsn))
+	sourceInstance, err := httpfs.New(http.FS(migrations), "migrations")
+	if err != nil {
+		log.Fatal(err)
+	}
+	m, err := migrate.NewWithSourceInstance("httpfs", sourceInstance, fmt.Sprintf("mysql://%s", dsn))
 	if err != nil {
 		log.Fatal(err)
 	}
