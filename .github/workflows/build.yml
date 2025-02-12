@@ -9,7 +9,6 @@ on:
     - '*'
 
 jobs:
-    
   build:
     runs-on: ubuntu-latest
     permissions: write-all
@@ -25,4 +24,3 @@ jobs:
     - uses: ncipollo/release-action@v1
       with:
         artifacts: "build/*"
-        prerelease: true
