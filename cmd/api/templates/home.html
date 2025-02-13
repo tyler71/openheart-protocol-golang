@@ -50,6 +50,8 @@
             white-space: pre;
             display: none;
             margin-top: 1rem;
+            max-height: 20em;
+            overflow-y: auto;
         }
         .count {
             font-size: 0.9rem;
@@ -138,7 +140,7 @@
             <div>
                 <label for="hostname">Send a reaction:</label>
                 <input type="text" id="hostname" class="hostname-input" value="tylery.com" placeholder="example.com">
-                <a href="https://tylery.com" rel="nofollow" id="goto-link">Go to tylery.com</a>
+                <span>Go to <a href="https://tylery.com" rel="ugc" id="goto-link">tylery.com</a></span>
             </div>
             <div id="hostname-error" class="hostname-error">Please enter a valid hostname (e.g., example.com)</div>
         </div>
@@ -164,7 +166,7 @@
         const link = document.getElementById('goto-link');
         if (hostname) {
             link.href = 'https://' + hostname;
-            link.textContent = 'Go to ' + hostname;
+            link.textContent = hostname;
             link.style.display = 'inline';
         } else {
             link.style.display = 'none';
@@ -202,10 +204,19 @@
                 const duration = Math.round(endTime - startTime);
                 
                 const jsonResponse = document.getElementById('jsonResponse');
-                jsonResponse.textContent = JSON.stringify(data, null, 2);
+                if (Object.keys(data).length === 0) {
+                    jsonResponse.textContent = "No reactions yet!";
+                } else {
+                    jsonResponse.textContent = JSON.stringify(data, null, 2);
+                }
                 jsonResponse.style.display = 'block';
                 
                 button.textContent = `All Reactions (${duration}ms)`;
+            } else if (response.status === 404) {
+                const jsonResponse = document.getElementById('jsonResponse');
+                jsonResponse.textContent = "No reactions yet!";
+                jsonResponse.style.display = 'block';
+                button.textContent = 'All Reactions';
             }
         } catch (error) {
             console.error('Error fetching reactions:', error);
@@ -243,6 +254,13 @@
                     topReactionSpan.innerHTML = '';
                 }
                 return counts;
+            } else if (response.status === 404) {
+                // Set all counts to 0 when the URL is not found
+                document.querySelectorAll('.count').forEach(span => {
+                    span.textContent = '0';
+                });
+                document.getElementById('topReaction').innerHTML = '';
+                return null;
             }
         } catch (error) {
             console.error('Error fetching counts:', error);
@@ -285,6 +303,11 @@
             const hostname = getHostname();
             if (hostname) {
                 updateCounts();
+                // Clear the JSON response box
+                const jsonResponse = document.getElementById('jsonResponse');
+                jsonResponse.style.display = 'none';
+                jsonResponse.textContent = '';
+                document.querySelector('.get-all-button').textContent = 'Get All Reactions';
             }
         }, 500);
     });
