@@ -1,16 +1,19 @@
 # OpenHeart Server
 
-A Go implementation of the [Open Heart Protocol](https://openheart.fyi/)
+A Go implementation of the [Open Heart Protocol](https://openheart.fyi/).
+
+A hosted version of this is available at https://openheart.tylery.com/  
+Knock yourself out 😉
 
 ### Differences
-- JSON is permitted `POST localhost:4444/example.com { "emoji": "🌾"}`
-- You may look up a specific emoji count: `GET https://localhost:4444/example.com/🌾`
+- JSON is permitted `POST https://openheart.tylery.com/example.com { "emoji": "🌾"}`
+- You may look up a specific emoji count: `GET https://https://openheart.tylery.com/example.com/🌾`
 
 ### Endpoints
 ```
-GET localhost:4444/example.com (200)
-GET localhost:4444/example.com/👩🏾‍❤️‍💋‍👩🏻 (200 | 404)
-POST localhost:4444/example.com (201 | 200)
+GET https://openheart.tylery.com/example.com (200)
+GET https://openheart.tylery.com/example.com/👩🏾‍❤️‍💋‍👩🏻 (200 | 404)
+POST https://openheart.tylery.com/example.com (201 | 200)
 ```
 
 ### Examples
@@ -20,10 +23,10 @@ POST localhost:4444/example.com (201 | 200)
 Using plain text:
 ```bash
 # Using curl
-curl -X POST -d "💖" http://localhost:4444/example.com
+curl -X POST -d "💖" https://openheart.tylery.com/example.com
 
 # Using fetch
-fetch('http://localhost:4444/example.com', {
+fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   body: '💖'
 })
@@ -35,10 +38,10 @@ Using form data:
 curl -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "💖=" \
-  http://localhost:4444/example.com
+  'https://openheart.tylery.com/example.com'
 
 # Using fetch
-fetch('http://localhost:4444/example.com', {
+fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -53,10 +56,10 @@ Using JSON:
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"emoji": "💖"}' \
-  http://localhost:4444/example.com
+  'https://openheart.tylery.com/example.com'
 
 # Using fetch
-fetch('http://localhost:4444/example.com', {
+fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
@@ -69,10 +72,10 @@ fetch('http://localhost:4444/example.com', {
 
 ```bash
 # Using curl
-curl http://localhost:4444/example.com
+curl 'https://openheart.tylery.com/example.com'
 
 # Using fetch
-fetch('http://localhost:4444/example.com')
+fetch('https://openheart.tylery.com/example.com')
 
 # Response
 {
@@ -86,10 +89,10 @@ fetch('http://localhost:4444/example.com')
 
 ```bash
 # Using curl
-curl http://localhost:4444/example.com/💖
+curl 'https://openheart.tylery.com/example.com/💖'
 
 # Using fetch
-fetch('http://localhost:4444/example.com/❤')
+fetch('https://openheart.tylery.com/example.com/❤')
 
 # Response
 {
@@ -126,13 +129,12 @@ DB_PASSWORD=<database password>
 
 Using command line flags:
 ```bash
-./openheart-protocol -http-port 8080 -base-url http://localhost -dsn "user:pass@tcp(localhost:3306)/mydb"
+./openheart-protocol -http-port 8080 -dsn "user:pass@tcp(localhost:3306)/mydb"
 ```
 
 Using environment variables:
 ```bash
 export HTTP_PORT=8080
-export BASE_URL=http://localhost
 export DB_DSN=user:pass@tcp(localhost:3306)/mydb
 ./openheart-protocol
 ```
