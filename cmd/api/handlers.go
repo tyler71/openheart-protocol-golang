@@ -81,7 +81,7 @@ func (es emojiStringT) decodeDb() string {
 
 type inputUrl string
 
-const hostnameRegex = `^[A-Za-z0-9][A-Za-z0-9-.]*\.\D{2,4}$`
+const hostnameRegex = `^[A-Za-z0-9][A-Za-z0-9-.]*\.\D{2,4}.*`
 
 func (u inputUrl) hostname() (string, error) {
 	m := regexp.MustCompile(hostnameRegex)
@@ -106,6 +106,14 @@ func (app *application) status(w http.ResponseWriter, r *http.Request) {
 // Returns all emoji's for a given url
 func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 	urlPathValue := inputUrl(r.PathValue("url"))
+
+	// Due to a limitation in net/http routing, we cannot do / and wildcard /*
+	// To get around this, if the urlPathValue is empty or the root document /
+	// We escape into the home page and return. Otherwise, return the emoji count
+	if urlPathValue == "" {
+		app.homePage(w, r)
+		return
+	}
 	parsedUrl, err := urlPathValue.hostname()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -152,53 +160,53 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 }
 
 // Returns emoji count for a specific url and emoji
-func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
-	urlPathValue, emojiPathValue := inputUrl(r.PathValue("url")), emojiStringT(r.PathValue("emoji"))
-	parsedUrl, err := urlPathValue.hostname()
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err = w.Write([]byte("INVALID URL"))
-		return
-	}
-	var urlId urlIdColumn
-	var emojiRecord emojiTable
-
-	emojiRunes, err := emojiPathValue.parseRunes()
-	if err != nil {
-		app.serverError(w, r, err)
-	}
-
-	// We look for the site id record. If none exists, we return 404
-	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", parsedUrl)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		app.serverError(w, r, err)
-	}
-	if errors.Is(err, sql.ErrNoRows) {
-		w.WriteHeader(http.StatusNotFound)
-		_, err = w.Write([]byte("NOT FOUND"))
-		return
-	}
-
-	err = app.db.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emojiRunes.dbEncode())
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		app.serverError(w, r, err)
-	}
-	if errors.Is(err, sql.ErrNoRows) {
-		w.WriteHeader(http.StatusNotFound)
-		_, err = w.Write([]byte("NOT FOUND"))
-		return
-	}
-
-	// On the happy path here, we have the record and return the count to the user
-	data := map[string]int{
-		string(emojiRecord.Emoji.decodeDb()): emojiRecord.Count,
-	}
-	w.Header().Set("Cache-Control", "max-age=30")
-	err = response.JSON(w, http.StatusOK, data)
-	if err != nil {
-		app.serverError(w, r, err)
-	}
-}
+//func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
+//	urlPathValue, emojiPathValue := inputUrl(r.PathValue("url")), emojiStringT(r.PathValue("emoji"))
+//	parsedUrl, err := urlPathValue.hostname()
+//	if err != nil {
+//		w.WriteHeader(http.StatusBadRequest)
+//		_, err = w.Write([]byte("INVALID URL"))
+//		return
+//	}
+//	var urlId urlIdColumn
+//	var emojiRecord emojiTable
+//
+//	emojiRunes, err := emojiPathValue.parseRunes()
+//	if err != nil {
+//		app.serverError(w, r, err)
+//	}
+//
+//	// We look for the site id record. If none exists, we return 404
+//	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", parsedUrl)
+//	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+//		app.serverError(w, r, err)
+//	}
+//	if errors.Is(err, sql.ErrNoRows) {
+//		w.WriteHeader(http.StatusNotFound)
+//		_, err = w.Write([]byte("NOT FOUND"))
+//		return
+//	}
+//
+//	err = app.db.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emojiRunes.dbEncode())
+//	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+//		app.serverError(w, r, err)
+//	}
+//	if errors.Is(err, sql.ErrNoRows) {
+//		w.WriteHeader(http.StatusNotFound)
+//		_, err = w.Write([]byte("NOT FOUND"))
+//		return
+//	}
+//
+//	// On the happy path here, we have the record and return the count to the user
+//	data := map[string]int{
+//		string(emojiRecord.Emoji.decodeDb()): emojiRecord.Count,
+//	}
+//	w.Header().Set("Cache-Control", "max-age=30")
+//	err = response.JSON(w, http.StatusOK, data)
+//	if err != nil {
+//		app.serverError(w, r, err)
+//	}
+//}
 
 // Increment the count for a specific emoji by 1
 func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
