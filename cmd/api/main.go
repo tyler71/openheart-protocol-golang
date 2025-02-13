@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"log/slog"
 	"openheart.tylery.com/internal/env"
 	"os"
@@ -74,7 +75,12 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func(db *database.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatalln("unable to close db connection!")
+		}
+	}(db)
 
 	app := application{
 		config: cfg,

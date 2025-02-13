@@ -326,17 +326,16 @@
     <h2>Endpoints</h2>
     <pre>
 GET https://openheart.tylery.com/example.com (200)
-GET https://openheart.tylery.com/example.com/👩🏾‍❤️‍💋‍👩🏻 (200 | 404)
 POST https://openheart.tylery.com/example.com (201 | 200)</pre>
 
     <h2>Creating a Reaction</h2>
     
     <h3>Using plain text:</h3>
     <pre>
-# Using curl
+# curl
 curl -X POST -d "💖" https://openheart.tylery.com/example.com
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   body: '💖'
@@ -344,13 +343,13 @@ fetch('https://openheart.tylery.com/example.com', {
 
     <h3>Using form data:</h3>
     <pre>
-# Using curl
+# curl
 curl -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "💖=" \
   'https://openheart.tylery.com/example.com'
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   headers: {
@@ -361,13 +360,13 @@ fetch('https://openheart.tylery.com/example.com', {
 
     <h3>Using JSON:</h3>
     <pre>
-# Using curl
+# curl
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"emoji": "💖"}' \
   'https://openheart.tylery.com/example.com'
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   headers: {
@@ -376,12 +375,12 @@ fetch('https://openheart.tylery.com/example.com', {
   body: JSON.stringify({ emoji: '💖' })
 })</pre>
 
-    <h2>Getting All Reactions</h2>
+    <h2>Getting Reactions</h2>
     <pre>
-# Using curl
+# curl
 curl 'https://openheart.tylery.com/example.com'
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com')
 
 # Response
@@ -389,19 +388,6 @@ fetch('https://openheart.tylery.com/example.com')
   "💖": 5,
   "👍": 3,
   "🌟": 1
-}</pre>
-
-    <h2>Getting Count for Specific Emoji</h2>
-    <pre>
-# Using curl
-curl 'https://openheart.tylery.com/example.com/💖'
-
-# Using fetch
-fetch('https://openheart.tylery.com/example.com/💖')
-
-# Response
-{
-  "💖": 5
 }</pre>
 </body>
 </html>

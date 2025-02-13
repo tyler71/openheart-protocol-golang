@@ -7,12 +7,10 @@ Knock yourself out 😉
 
 ### Differences
 - JSON is permitted `POST https://openheart.tylery.com/example.com { "emoji": "🌾"}`
-- You may look up a specific emoji count: `GET https://https://openheart.tylery.com/example.com/🌾`
 
 ### Endpoints
 ```
 GET https://openheart.tylery.com/example.com (200)
-GET https://openheart.tylery.com/example.com/👩🏾‍❤️‍💋‍👩🏻 (200 | 404)
 POST https://openheart.tylery.com/example.com (201 | 200)
 ```
 
@@ -22,10 +20,10 @@ POST https://openheart.tylery.com/example.com (201 | 200)
 
 Using plain text:
 ```bash
-# Using curl
+# curl
 curl -X POST -d "💖" https://openheart.tylery.com/example.com
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   body: '💖'
@@ -34,13 +32,13 @@ fetch('https://openheart.tylery.com/example.com', {
 
 Using form data:
 ```bash
-# Using curl
+# curl
 curl -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "💖=" \
   'https://openheart.tylery.com/example.com'
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   headers: {
@@ -52,13 +50,13 @@ fetch('https://openheart.tylery.com/example.com', {
 
 Using JSON:
 ```bash
-# Using curl
+# curl
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"emoji": "💖"}' \
   'https://openheart.tylery.com/example.com'
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com', {
   method: 'POST',
   headers: {
@@ -68,13 +66,13 @@ fetch('https://openheart.tylery.com/example.com', {
 })
 ```
 
-#### Getting All Reactions
+#### Getting Reactions
 
 ```bash
-# Using curl
+# curl
 curl 'https://openheart.tylery.com/example.com'
 
-# Using fetch
+# fetch
 fetch('https://openheart.tylery.com/example.com')
 
 # Response
@@ -82,21 +80,6 @@ fetch('https://openheart.tylery.com/example.com')
   "💖": 5,
   "👍": 3,
   "🌟": 1
-}
-```
-
-#### Getting Count for Specific Emoji
-
-```bash
-# Using curl
-curl 'https://openheart.tylery.com/example.com/💖'
-
-# Using fetch
-fetch('https://openheart.tylery.com/example.com/❤')
-
-# Response
-{
-  "💖": 5
 }
 ```
 
@@ -141,12 +124,11 @@ export DB_DSN=user:pass@tcp(localhost:3306)/mydb
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/status` | Health check endpoint |
-| GET | `/{url}` | Get all emoji reactions for a URL |
-| GET | `/{url}/{emoji}` | Get count for specific emoji on a URL |
-| POST | `/{url}` | Add emoji reaction to a URL |
+| Method | Path      | Description                   |
+|--------|-----------|-------------------------------|
+| GET    | `/status` | Health check endpoint         |
+| GET    | `/{url}`  | Get emoji reactions for a URL |
+| POST   | `/{url}`  | Add emoji reaction to a URL   |
 
 ## Development
 
