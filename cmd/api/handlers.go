@@ -325,16 +325,35 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 			tx.Rollback()
 		}
 	}
+
+	// If Accept header is included, we will return the count in that format. Currently only json
+	respondCount := r.Header.Get("Accept") == "application/json"
+
+	if respondCount {
+		err = tx.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emojiRunes.dbEncode())
+	}
 	tx.Commit()
 
-	if noEmojiRecord == true {
-		w.WriteHeader(201)
-	} else {
-		w.WriteHeader(200)
-	}
-
 	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, emojiRunes.dbDecode()))
-	_, err = w.Write([]byte("OK"))
+	var status int
+	if noEmojiRecord == true {
+		status = http.StatusCreated
+	} else {
+		status = http.StatusOK
+	}
+	if respondCount {
+		if r.Header.Get("Accept") == "application/json" {
+			data := map[string]int{
+				emojiRecord.Emoji.decodeDb(): emojiRecord.Count,
+			}
+			err = response.JSONWithHeaders(w, status, data, http.Header{
+				"Cache-Control": []string{"max-age=30"},
+			})
+		}
+	} else {
+		w.Header().Set("Cache-Control", "max-age=30")
+		_, err = w.Write([]byte("OK"))
+	}
 	if err != nil {
 		app.serverError(w, r, err)
 	}

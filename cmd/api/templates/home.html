@@ -247,19 +247,12 @@
                         topCount = count;
                     }
                 }
-                const topReactionSpan = document.getElementById('topReaction');
-                if (topCount > 0) {
-                    topReactionSpan.innerHTML = `<span class="top-reaction-count"><span class="emoji">${topEmoji}</span>${topCount}</span>`;
-                } else {
-                    topReactionSpan.innerHTML = '';
-                }
                 return counts;
             } else if (response.status === 404) {
                 // Set all counts to 0 when the URL is not found
                 document.querySelectorAll('.count').forEach(span => {
                     span.textContent = '0';
                 });
-                document.getElementById('topReaction').innerHTML = '';
                 return null;
             }
         } catch (error) {
@@ -277,19 +270,61 @@
             const response = await fetch('/' + hostname, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'text/plain'
+                    'Content-Type': 'text/plain',
+                    'Accept': 'application/json'
                 },
                 body: emoji,
             });
             
             if (response.ok) {
-                result.textContent = `Reaction sent to ${hostname}!`;
+                const data = await response.json();
+                // Update the specific emoji count
+                const countSpan = document.querySelector(`.count[data-emoji="${emoji}"]`);
+                if (countSpan) {
+                    countSpan.textContent = data[emoji] || 0;
+                }
+                // Still update all counts to keep other emojis in sync
                 await updateCounts();
             } else {
                 result.textContent = 'Error sending reaction';
             }
         } catch (error) {
             result.textContent = 'Error: ' + error.message;
+        }
+    }
+
+    async function updateGithubReactionCount() {
+        try {
+            const response = await fetch('/github.com/tyler71/openheart-protocol-golang');
+            if (response.ok) {
+                const data = await response.json();
+                const count = data['❤️'] || 0;
+                document.getElementById('githubReactionCount').textContent = count;
+            }
+        } catch (error) {
+            console.error('Error fetching GitHub reactions:', error);
+        }
+    }
+
+    async function sendGithubReaction(emoji) {
+        try {
+            const response = await fetch('/github.com/tyler71/openheart-protocol-golang', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    Accept: 'application/json',
+                },
+                body: emoji,
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              const count = data['❤️'] || 0;
+              document.getElementById('githubReactionCount').textContent = count;
+              // await updateGithubReactionCount();
+            }
+        } catch (error) {
+            console.error('Error sending GitHub reaction:', error);
         }
     }
 
@@ -316,11 +351,20 @@
     document.addEventListener('DOMContentLoaded', function() {
         getHostname();
     });
+
+    // Load initial GitHub reaction count
+    document.addEventListener('DOMContentLoaded', () => {
+        updateGithubReactionCount();
+    });
     </script>
 
     <div style="margin: 2rem 0;">
         <a href="https://github.com/tyler71/openheart-protocol-golang" rel="external" class="github-button">View the git repo!</a>
-        <span id="topReaction" class="top-reaction"></span>
+        <span id="githubReaction" class="top-reaction">
+            <button onclick="sendGithubReaction('❤️')" style="background: none; border: none; cursor: pointer; padding: 0;">
+                <span class="top-reaction-count"><span class="emoji">❤️</span><span id="githubReactionCount">0</span></span>
+            </button>
+        </span>
     </div>
 
     <h2>Endpoints</h2>
