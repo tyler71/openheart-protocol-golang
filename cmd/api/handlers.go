@@ -123,6 +123,7 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 		data[emojiRecords[i].Emoji.decodeDb()] = emojiRecords[i].Count
 	}
 
+	w.Header().Set("Cache-Control", "max-age=30")
 	err = response.JSON(w, http.StatusOK, data)
 	if err != nil {
 		app.serverError(w, r, err)
@@ -165,6 +166,7 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 	data := map[string]int{
 		string(emojiRecord.Emoji.decodeDb()): emojiRecord.Count,
 	}
+	w.Header().Set("Cache-Control", "max-age=30")
 	err = response.JSON(w, http.StatusOK, data)
 	if err != nil {
 		app.serverError(w, r, err)
