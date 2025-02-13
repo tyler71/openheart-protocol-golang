@@ -59,6 +59,7 @@
         #result {
             margin-top: 1rem;
             font-style: italic;
+            color: #666;
         }
         .github-button {
             display: inline-block;
@@ -105,6 +106,21 @@
             border-radius: 8px;
             margin-right: 0.5rem;
         }
+        .hostname-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .hostname-error {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -118,7 +134,15 @@
 
     <div class="demo">
         <h3>Try it out!</h3>
-        <p>Click an emoji to send a reaction to <a href="https://tylery.com" rel="external author">tylery.com</a>:</p>
+        <div>
+            <div>
+                <label for="hostname">Send a reaction:</label>
+                <input type="text" id="hostname" class="hostname-input" value="tylery.com" placeholder="example.com">
+                <a href="https://tylery.com" rel="nofollow" id="goto-link">Go to tylery.com</a>
+            </div>
+            <div id="hostname-error" class="hostname-error">Please enter a valid hostname (e.g., example.com)</div>
+        </div>
+        <p>Click an emoji to send a reaction:</p>
         <div>
             <button onclick="sendReaction('❤️')">❤️ <span class="count" data-emoji="❤️">0</span></button>
             <button onclick="sendReaction('👍')">👍 <span class="count" data-emoji="👍">0</span></button>
@@ -131,13 +155,47 @@
     </div>
 
     <script>
+    function isValidHostname(hostname) {
+        const hostnameRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/;
+        return hostnameRegex.test(hostname);
+    }
+
+    function updateGoToLink(hostname) {
+        const link = document.getElementById('goto-link');
+        if (hostname) {
+            link.href = 'https://' + hostname;
+            link.textContent = 'Go to ' + hostname;
+            link.style.display = 'inline';
+        } else {
+            link.style.display = 'none';
+        }
+    }
+
+    function getHostname() {
+        const hostname = document.getElementById('hostname').value.trim();
+        const error = document.getElementById('hostname-error');
+        
+        if (!isValidHostname(hostname)) {
+            error.style.display = 'block';
+            updateGoToLink(null);
+            return null;
+        }
+        
+        error.style.display = 'none';
+        updateGoToLink(hostname);
+        return hostname;
+    }
+
     async function getAllReactions() {
+        const hostname = getHostname();
+        if (!hostname) return;
+
         const button = document.querySelector('.get-all-button');
         const startTime = performance.now();
         button.textContent = 'Loading...';
         
         try {
-            const response = await fetch('/tylery.com');
+            const response = await fetch('/' + hostname);
             if (response.ok) {
                 const data = await response.json();
                 const endTime = performance.now();
@@ -156,8 +214,11 @@
     }
 
     async function updateCounts() {
+        const hostname = getHostname();
+        if (!hostname) return null;
+
         try {
-            const response = await fetch('/tylery.com');
+            const response = await fetch('/' + hostname);
             if (response.ok) {
                 const counts = await response.json();
                 // Update each emoji count
@@ -190,9 +251,12 @@
     }
 
     async function sendReaction(emoji) {
+        const hostname = getHostname();
+        if (!hostname) return;
+
         const result = document.getElementById('result');
         try {
-            const response = await fetch('/tylery.com', {
+            const response = await fetch('/' + hostname, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'text/plain'
@@ -201,6 +265,7 @@
             });
             
             if (response.ok) {
+                result.textContent = `Reaction sent to ${hostname}!`;
                 await updateCounts();
             } else {
                 result.textContent = 'Error sending reaction';
@@ -212,6 +277,19 @@
 
     // Load initial counts when page loads
     document.addEventListener('DOMContentLoaded', updateCounts);
+
+    // Update counts when hostname changes
+    document.getElementById('hostname').addEventListener('input', function() {
+        const hostname = getHostname();
+        if (hostname) {
+            updateCounts();
+        }
+    });
+
+    // Initial link update
+    document.addEventListener('DOMContentLoaded', function() {
+        getHostname();
+    });
     </script>
 
     <div style="margin: 2rem 0;">
