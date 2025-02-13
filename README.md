@@ -79,7 +79,7 @@ fetch('https://openheart.tylery.com/example.com')
 
 # Response
 {
-  "❤": 5,
+  "💖": 5,
   "👍": 3,
   "🌟": 1
 }

@@ -25,6 +25,32 @@
         .demo button:hover {
             background: #f4f4f4;
         }
+        button.get-all-button {
+            display: block;
+            font-size: 1.0rem;
+            padding: 0.6rem 1.2rem;
+            margin: 0.2rem 0;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            transition: all 0.2s ease;
+            min-width: 150px;
+        }
+        .get-all-button:hover {
+            background: #f4f4f4;
+            transform: translateY(-1px);
+        }
+        .json-response {
+            background: #2b2b2b;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre;
+            display: none;
+            margin-top: 1rem;
+        }
         .count {
             font-size: 0.9rem;
             color: #666;
@@ -33,6 +59,56 @@
         #result {
             margin-top: 1rem;
             font-style: italic;
+        }
+        .github-button {
+            display: inline-block;
+            font-size: 1.2rem;
+            padding: 0.8rem 1.5rem;
+            margin: 1rem 0;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .github-button:hover {
+            background: linear-gradient(135deg, #45a049, #4CAF50);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        .top-reaction {
+            display: inline-block;
+            margin-left: 1rem;
+            font-size: 1.2rem;
+            opacity: 0.9;
+            vertical-align: middle;
+        }
+        .top-reaction-count {
+            display: inline-block;
+            background: linear-gradient(135deg, #E94E77, #C6436E);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 12px;
+            margin-left: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            animation: pulse 2s infinite;
+        }
+        .top-reaction-count .emoji {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0.2rem 0.5rem;
+            border-radius: 8px;
+            margin-right: 0.5rem;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -50,9 +126,35 @@
             <button onclick="sendReaction('🎉')">🎉 <span class="count" data-emoji="🎉">0</span></button>
         </div>
         <div id="result"></div>
+        <button onclick="getAllReactions()" class="get-all-button">All Reactions</button>
+        <pre id="jsonResponse" class="json-response"></pre>
     </div>
 
     <script>
+    async function getAllReactions() {
+        const button = document.querySelector('.get-all-button');
+        const startTime = performance.now();
+        button.textContent = 'Loading...';
+        
+        try {
+            const response = await fetch('/tylery.com');
+            if (response.ok) {
+                const data = await response.json();
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                const jsonResponse = document.getElementById('jsonResponse');
+                jsonResponse.textContent = JSON.stringify(data, null, 2);
+                jsonResponse.style.display = 'block';
+                
+                button.textContent = `All Reactions (${duration}ms)`;
+            }
+        } catch (error) {
+            console.error('Error fetching reactions:', error);
+            button.textContent = 'All Reactions (failed)';
+        }
+    }
+
     async function updateCounts() {
         try {
             const response = await fetch('/tylery.com');
@@ -63,6 +165,22 @@
                     const emoji = span.dataset.emoji;
                     span.textContent = counts[emoji] || 0;
                 });
+
+                // Update top reaction
+                let topEmoji = '';
+                let topCount = 0;
+                for (const [emoji, count] of Object.entries(counts)) {
+                    if (count > topCount) {
+                        topEmoji = emoji;
+                        topCount = count;
+                    }
+                }
+                const topReactionSpan = document.getElementById('topReaction');
+                if (topCount > 0) {
+                    topReactionSpan.innerHTML = `<span class="top-reaction-count"><span class="emoji">${topEmoji}</span>${topCount}</span>`;
+                } else {
+                    topReactionSpan.innerHTML = '';
+                }
                 return counts;
             }
         } catch (error) {
@@ -95,6 +213,11 @@
     // Load initial counts when page loads
     document.addEventListener('DOMContentLoaded', updateCounts);
     </script>
+
+    <div style="margin: 2rem 0;">
+        <a href="https://github.com/tyler71/openheart-protocol-golang" rel="external" class="github-button">View the git repo!</a>
+        <span id="topReaction" class="top-reaction"></span>
+    </div>
 
     <h2>Endpoints</h2>
     <pre>
@@ -159,7 +282,7 @@ fetch('https://openheart.tylery.com/example.com')
 
 # Response
 {
-  "❤": 5,
+  "💖": 5,
   "👍": 3,
   "🌟": 1
 }</pre>
