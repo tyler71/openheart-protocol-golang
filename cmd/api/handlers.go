@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"openheart.tylery.com/internal/response"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -78,6 +79,20 @@ func (es emojiStringT) decodeDb() string {
 	return emojiRunes.dbDecode()
 }
 
+type inputUrl string
+
+const hostnameRegex = `^[A-Za-z0-9][A-Za-z0-9-.]*\.\D{2,4}$`
+
+func (u inputUrl) hostname() (string, error) {
+	m := regexp.MustCompile(hostnameRegex)
+	result := m.FindStringSubmatch(string(u))
+	if len(result) > 0 {
+		return result[0], nil
+	} else {
+		return "", errors.New("no hostname found")
+	}
+}
+
 func (app *application) status(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{
 		"status": "OK",
@@ -90,13 +105,19 @@ func (app *application) status(w http.ResponseWriter, r *http.Request) {
 
 // Returns all emoji's for a given url
 func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
-	urlPathValue := r.PathValue("url")
+	urlPathValue := inputUrl(r.PathValue("url"))
+	parsedUrl, err := urlPathValue.hostname()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err = w.Write([]byte("INVALID URL"))
+		return
+	}
 
 	var urlId urlIdColumn
 	var emojiRecords []emojiTable
 
 	// We look for the site id record. If none exists, we return 404
-	err := app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
+	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", parsedUrl)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
 	}
@@ -132,7 +153,13 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 
 // Returns emoji count for a specific url and emoji
 func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
-	urlPathValue, emojiPathValue := r.PathValue("url"), emojiStringT(r.PathValue("emoji"))
+	urlPathValue, emojiPathValue := inputUrl(r.PathValue("url")), emojiStringT(r.PathValue("emoji"))
+	parsedUrl, err := urlPathValue.hostname()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err = w.Write([]byte("INVALID URL"))
+		return
+	}
 	var urlId urlIdColumn
 	var emojiRecord emojiTable
 
@@ -142,7 +169,7 @@ func (app *application) getOne(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// We look for the site id record. If none exists, we return 404
-	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
+	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", parsedUrl)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
 	}
@@ -236,14 +263,20 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlPathValue := r.PathValue("url")
+	urlPathValue := inputUrl(r.PathValue("url"))
+	parsedUrl, err := urlPathValue.hostname()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err = w.Write([]byte("INVALID URL"))
+		return
+	}
 	var urlId urlIdColumn
 
 	var emojiRecord emojiTable
 
 	// First, we get the site id based on the url. We should probably try to parse the url to try and only get
 	// relevant data.
-	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", urlPathValue)
+	err = app.db.Get(&urlId, "SELECT id FROM site WHERE url=?", parsedUrl)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		app.serverError(w, r, err)
 	}
