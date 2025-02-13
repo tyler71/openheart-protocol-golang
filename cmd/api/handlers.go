@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"embed"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,7 +71,7 @@ func (es emojiStringT) parseRunes() (emojiRunesT, error) {
 func (es emojiStringT) decodeDb() string {
 	splitStrings := strings.Split(string(es), "|")
 	emojiRunes := make(emojiRunesT, len(splitStrings))
-	for i, _ := range splitStrings {
+	for i := range splitStrings {
 		parsedInt, _ := strconv.Atoi(splitStrings[i])
 		emojiRunes[i] = rune(parsedInt)
 	}
@@ -290,6 +292,25 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 
 	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, emojiRunes.dbDecode()))
 	_, err = w.Write([]byte("OK"))
+	if err != nil {
+		app.serverError(w, r, err)
+	}
+}
+
+//go:embed templates/home.html
+var homeHtml embed.FS
+
+func (app *application) homePage(w http.ResponseWriter, r *http.Request) {
+	content, err := homeHtml.ReadFile("templates/home.html")
+
+	if err != nil {
+		app.serverError(w, r, fmt.Errorf("error reading template: %v", err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(content)
 	if err != nil {
 		app.serverError(w, r, err)
 	}

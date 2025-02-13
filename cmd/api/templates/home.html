@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>OpenHeart API</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; max-width: 800px; margin: 0 auto; padding: 2rem; }
+        pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        code { background: #f4f4f4; padding: 0.2rem 0.4rem; border-radius: 2px; }
+        h2 { margin-top: 2rem; }
+        .demo { 
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .demo button {
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        .demo button:hover {
+            background: #f4f4f4;
+        }
+        .count {
+            font-size: 0.9rem;
+            color: #666;
+            margin-left: 0.5rem;
+        }
+        #result {
+            margin-top: 1rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenHeart API</h1>
+    <p>A Go implementation of the <a href="https://openheart.fyi/">Open Heart Protocol</a>.</p>
+
+    <div class="demo">
+        <h3>Try it out!</h3>
+        <p>Click an emoji to send a reaction to <a href="https://tylery.com" rel="external author">tylery.com</a>:</p>
+        <div>
+            <button onclick="sendReaction('❤️')">❤️ <span class="count" data-emoji="❤️">0</span></button>
+            <button onclick="sendReaction('👍')">👍 <span class="count" data-emoji="👍">0</span></button>
+            <button onclick="sendReaction('🌟')">🌟 <span class="count" data-emoji="🌟">0</span></button>
+            <button onclick="sendReaction('🎉')">🎉 <span class="count" data-emoji="🎉">0</span></button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+    async function updateCounts() {
+        try {
+            const response = await fetch('/tylery.com');
+            if (response.ok) {
+                const counts = await response.json();
+                // Update each emoji count
+                document.querySelectorAll('.count').forEach(span => {
+                    const emoji = span.dataset.emoji;
+                    span.textContent = counts[emoji] || 0;
+                });
+                return counts;
+            }
+        } catch (error) {
+            console.error('Error fetching counts:', error);
+        }
+        return null;
+    }
+
+    async function sendReaction(emoji) {
+        const result = document.getElementById('result');
+        try {
+            const response = await fetch('/tylery.com', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
+                body: emoji,
+            });
+            
+            if (response.ok) {
+                await updateCounts();
+            } else {
+                result.textContent = 'Error sending reaction';
+            }
+        } catch (error) {
+            result.textContent = 'Error: ' + error.message;
+        }
+    }
+
+    // Load initial counts when page loads
+    document.addEventListener('DOMContentLoaded', updateCounts);
+    </script>
+
+    <h2>Endpoints</h2>
+    <pre>
+GET https://openheart.tylery.com/example.com (200)
+GET https://openheart.tylery.com/example.com/👩🏾‍❤️‍💋‍👩🏻 (200 | 404)
+POST https://openheart.tylery.com/example.com (201 | 200)</pre>
+
+    <h2>Creating a Reaction</h2>
+    
+    <h3>Using plain text:</h3>
+    <pre>
+# Using curl
+curl -X POST -d "💖" https://openheart.tylery.com/example.com
+
+# Using fetch
+fetch('https://openheart.tylery.com/example.com', {
+  method: 'POST',
+  body: '💖'
+})</pre>
+
+    <h3>Using form data:</h3>
+    <pre>
+# Using curl
+curl -X POST \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "💖=" \
+  'https://openheart.tylery.com/example.com'
+
+# Using fetch
+fetch('https://openheart.tylery.com/example.com', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded'
+  },
+  body: '💖='
+})</pre>
+
+    <h3>Using JSON:</h3>
+    <pre>
+# Using curl
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"emoji": "💖"}' \
+  'https://openheart.tylery.com/example.com'
+
+# Using fetch
+fetch('https://openheart.tylery.com/example.com', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ emoji: '💖' })
+})</pre>
+
+    <h2>Getting All Reactions</h2>
+    <pre>
+# Using curl
+curl 'https://openheart.tylery.com/example.com'
+
+# Using fetch
+fetch('https://openheart.tylery.com/example.com')
+
+# Response
+{
+  "❤": 5,
+  "👍": 3,
+  "🌟": 1
+}</pre>
+
+    <h2>Getting Count for Specific Emoji</h2>
+    <pre>
+# Using curl
+curl 'https://openheart.tylery.com/example.com/💖'
+
+# Using fetch
+fetch('https://openheart.tylery.com/example.com/❤')
+
+# Response
+{
+  "💖": 5
+}</pre>
+</body>
+</html>
