@@ -1,4 +1,7 @@
-# OpenHeart Server
+# OpenHeart API Server
+
+![Hero Image showing demo dashboard](https://github.com/user-attachments/assets/ab6aeacb-c70e-4d5a-85c3-e217cb110825)
+
 
 A Go implementation of the [Open Heart Protocol](https://openheart.fyi/).
 
