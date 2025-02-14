@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dmolesUC/emoji"
+	emojiLib "github.com/dmolesUC/emoji"
 	"github.com/rivo/uniseg"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"openheart.tylery.com/internal/response"
@@ -23,60 +24,83 @@ const maxPayloadByteSize = 64
 
 type urlIdColumn int
 type emojiTable struct {
-	Id     int          `db:"id"`
-	SiteId int          `db:"site_id"`
-	Emoji  emojiStringT `db:"emoji"`
-	Count  int          `db:"count"`
+	Id     int            `db:"id"`
+	SiteId int            `db:"site_id"`
+	Emoji  dbEncodedEmoji `db:"emoji"`
+	Count  int            `db:"count"`
 }
+type dbEncodedEmoji string
 
-type emojiStringT string
-
-type emojiRunesT []rune
-
-func (e emojiRunesT) stringJoin(separator string) string {
-	var dbString = make([]string, len(e))
-	var count int
-	for i := range e {
-		if e[i] == 0 {
-			break
-		}
-		a := int(e[i])
-		dbString[i] = strconv.Itoa(a)
-		count++
-	}
-	if count > 1 {
-		return strings.Join(dbString, separator)
-	} else {
-		return dbString[0]
-	}
-}
-func (e emojiRunesT) dbEncode() string {
-	return e.stringJoin("|")
-}
-func (e emojiRunesT) dbDecode() string {
-	return string(e)
-}
-
-func (es emojiStringT) parseRunes() (emojiRunesT, error) {
-	emojiRunes := make(emojiRunesT, utf8.RuneCountInString(string(es)))
-	var count int
-	for _, r := range es {
-		emojiRunes[count] = r
-		count++
-	}
-	if !emoji.IsEmoji(emojiRunes[0]) {
-		return emojiRunes, errors.New("no emoji found")
-	}
-	return emojiRunes[:count], nil
-}
-func (es emojiStringT) decodeDb() string {
-	splitStrings := strings.Split(string(es), "|")
-	emojiRunes := make(emojiRunesT, len(splitStrings))
+func (e dbEncodedEmoji) Decode() string {
+	splitStrings := strings.Split(string(e), "|")
+	emojiRunes := make([]rune, len(splitStrings))
 	for i := range splitStrings {
 		parsedInt, _ := strconv.Atoi(splitStrings[i])
 		emojiRunes[i] = rune(parsedInt)
 	}
-	return emojiRunes.dbDecode()
+	return string(emojiRunes)
+}
+
+type emojiT struct {
+	Bytes     []byte
+	runes     []rune
+	s         string
+	DbEncoded string
+}
+
+// Return rendered string if not cached, render and cache otherwise
+func (e emojiT) String() string {
+	if e.s != "" {
+		return e.s
+	}
+	if len(e.Bytes) == 0 {
+		log.Println("Missing bytes for String output")
+	}
+	e.s = string(e.Bytes)
+	return e.s
+}
+
+func (e emojiT) dbEncode() string {
+	if e.DbEncoded != "" {
+		return e.DbEncoded
+	}
+	runes, _ := e.parseRunes()
+	var dbString = make([]string, len(runes))
+	var count int
+	for i := range runes {
+		if runes[i] == 0 {
+			break
+		}
+		a := int(runes[i])
+		dbString[i] = strconv.Itoa(a)
+		count++
+	}
+	if count > 1 {
+		e.DbEncoded = strings.Join(dbString, "|")
+	} else {
+		e.DbEncoded = dbString[0]
+	}
+	return e.DbEncoded
+}
+
+func (e emojiT) parseRunes() ([]rune, error) {
+	if e.runes != nil {
+		return e.runes, nil
+	}
+	if len(e.Bytes) == 0 {
+		log.Println("Missing bytes for parseRunes output")
+	}
+	emojiRunes := make([]rune, utf8.RuneCountInString(string(e.Bytes)))
+	var count int
+	for _, r := range string(e.Bytes) {
+		emojiRunes[count] = r
+		count++
+	}
+	if !emojiLib.IsEmoji(emojiRunes[0]) {
+		return emojiRunes, errors.New("no emoji found")
+	}
+	e.runes = emojiRunes[:count]
+	return emojiRunes[:count], nil
 }
 
 type inputUrl string
@@ -149,7 +173,7 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 	// We're not interested in revealing all information. We only return the emoji and the count for it
 	data := make(map[string]int, len(emojiRecords))
 	for i := range emojiRecords {
-		data[emojiRecords[i].Emoji.decodeDb()] = emojiRecords[i].Count
+		data[emojiRecords[i].Emoji.Decode()] = emojiRecords[i].Count
 	}
 
 	w.Header().Set("Cache-Control", "max-age=30")
@@ -210,10 +234,10 @@ func (app *application) getAll(w http.ResponseWriter, r *http.Request) {
 
 // Increment the count for a specific emoji by 1
 func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
-	emojiRunes := make(emojiRunesT, 4)
 	reader := io.LimitReader(r.Body, maxPayloadByteSize)
 	encodedValue := make([]byte, maxPayloadByteSize)
 	byteLength, err := reader.Read(encodedValue)
+	var emoji emojiT
 
 	// Form submissions are url encoded, so we need to decode them before getting the
 	// key rune
@@ -223,14 +247,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			app.serverError(w, r, err)
 		}
-
-		es := emojiStringT(encodedValue)
-		emojiRunes, err = es.parseRunes()
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			_, err = w.Write([]byte("BAD REQUEST"))
-			return
-		}
+		emoji.Bytes = encodedValue
 
 		// JSON has a specific structure {"emoji": "🌾"}
 		// So, we need to convert it to this structure first. Then we parse it
@@ -244,8 +261,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		}
 
 		encodedValue, _, _, _ = uniseg.Step([]byte(request.Emoji), -1)
-		es := emojiStringT(encodedValue)
-		emojiRunes, err = es.parseRunes()
+		emoji.Bytes = encodedValue
 		if err != nil {
 			app.serverError(w, r, err)
 		}
@@ -253,19 +269,12 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		//	For all other requests, we try to decode the string and get the first rune.
 	} else {
 		encodedValue, _, _, _ = uniseg.Step(encodedValue, -1)
-		es := emojiStringT(encodedValue)
-		emojiRunes, err = es.parseRunes()
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			_, err = w.Write([]byte("BAD REQUEST"))
-			return
-		}
-	}
-	if err != nil && err.Error() != "EOF" {
-		app.serverError(w, r, err)
+		emoji.Bytes = encodedValue
 	}
 
-	if emojiRunes[0] == 0 {
+	// Let's see if the first rune is an emoji
+	emojiRunes, err := emoji.parseRunes()
+	if emojiRunes[0] == 0 || err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err = w.Write([]byte("BAD REQUEST"))
 		return
@@ -296,7 +305,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Next, we get the emoji count for this specific url. It might not exist! We need to check for this and create a new one
 		// if this is the case
-		err = app.db.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emojiRunes.dbEncode())
+		err = app.db.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emoji.dbEncode())
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			app.serverError(w, r, err)
 		}
@@ -317,7 +326,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if noEmojiRecord {
-		tx.MustExec("INSERT INTO emoji (site_id, emoji) VALUES (?, ?)", urlId, emojiRunes.dbEncode())
+		tx.MustExec("INSERT INTO emoji (site_id, emoji) VALUES (?, ?)", urlId, emoji.dbEncode())
 	} else {
 		updateStmt, _ := tx.Prepare("UPDATE emoji SET count=? WHERE id=?")
 		_, err = updateStmt.Exec(emojiRecord.Count+1, emojiRecord.Id)
@@ -330,11 +339,11 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	respondCount := r.Header.Get("Accept") == "application/json"
 
 	if respondCount {
-		err = tx.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emojiRunes.dbEncode())
+		err = tx.Get(&emojiRecord, "SELECT id, site_id, emoji, count FROM emoji WHERE site_id=? AND emoji=?", urlId, emoji.dbEncode())
 	}
 	tx.Commit()
 
-	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, emojiRunes.dbDecode()))
+	app.logger.Info(fmt.Sprintf("%s -> %s reaction!", urlPathValue, emoji.String()))
 	var status int
 	if noEmojiRecord == true {
 		status = http.StatusCreated
@@ -344,7 +353,7 @@ func (app *application) createOne(w http.ResponseWriter, r *http.Request) {
 	if respondCount {
 		if r.Header.Get("Accept") == "application/json" {
 			data := map[string]int{
-				emojiRecord.Emoji.decodeDb(): emojiRecord.Count,
+				emojiRecord.Emoji.Decode(): emojiRecord.Count,
 			}
 			err = response.JSONWithHeaders(w, status, data, http.Header{
 				"Cache-Control": []string{"max-age=30"},
